@@ -2,43 +2,27 @@
 # dependencies = [
 #     "requests==2.32.3",
 #     "beautifulsoup4==4.12.3",
+#     "click==8.1.7",
+#     "tqdm==4.66.4",
 # ]
 # ///
 
-import argparse
 import os
 import re
 import shutil
 import zipfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from threading import Lock
+from typing import Dict, List, Any
 
+import click
 import requests
 from bs4 import BeautifulSoup
+from tqdm import tqdm
 
 
-args = argparse.ArgumentParser(description="fix notion html exports")
-args.add_argument("path", type=Path, help="path to the zipped html export")
-args = args.parse_args()
-path = args.path
-assert path.exists(), f"{path} does not exist"
-
-unzippath = path.with_suffix("")
-if unzippath.exists():
-    shutil.rmtree(unzippath)
-with zipfile.ZipFile(path, "r") as zip_ref:
-    zip_ref.extractall(unzippath)
-
-cachepath = unzippath / ".cache"
-cachepath.mkdir(exist_ok=True)
-cached_img_links = []
-
-css_injectionpath = Path.cwd() / "notionbackup" / "injections" / "injection.css"
-
-
-htmlpaths = list(unzippath.rglob("*.html"))
-for htmlpath in htmlpaths:
-    print(f"processing: {htmlpath}")
-
+def process_html_file(htmlpath: Path, cachepath: Path, css_injection: str, cached_img_links: List[str], cached_img_lock: Lock) -> Dict[str, Any]:
     content = htmlpath.read_text(encoding="utf-8")
     soup = BeautifulSoup(content, "html.parser")
     elems = soup.find_all()
@@ -65,7 +49,7 @@ for htmlpath in htmlpaths:
 
     # inject custom css
     style_elem = soup.new_tag("style")
-    style_elem.string = css_injectionpath.read_text(encoding="utf-8")
+    style_elem.string = css_injection
     head = soup.head
     head.append(style_elem)
 
@@ -74,9 +58,11 @@ for htmlpath in htmlpaths:
     external_imgs = [img for img in imgs if img.has_attr("src") and img["src"].startswith("http")]
     for img in external_imgs:
         url = img["src"]
-        if url in cached_img_links:
-            continue
-        cached_img_links.append(url)
+        with cached_img_lock:
+            if url in cached_img_links:
+                continue
+            cached_img_links.append(url)
+
         try:
             response = requests.get(url, stream=True)
             filename = Path(url).name
@@ -87,7 +73,6 @@ for htmlpath in htmlpaths:
             img["src"] = os.path.relpath(cache_img_path, htmlpath.parent)
         except requests.exceptions.ConnectionError:
             pass
-    print(f"\t cached {len(external_imgs)} images")
 
     # cache katex
     equations = [elem for elem in elems if elem and elem.name == "figure" and "equation" in elem.get("class", [])]
@@ -109,7 +94,6 @@ for htmlpath in htmlpaths:
         link_elem["rel"] = "stylesheet"
         link_elem["href"] = os.path.relpath(katex_cache_path, htmlpath.parent)
         head.append(link_elem)
-    print(f"\t cached {len(equations)} equations")
 
     # format html, keep equations as they are
     equations = [elem for elem in soup.find_all("figure", class_="equation")]
@@ -125,3 +109,46 @@ for htmlpath in htmlpaths:
 
     # write back
     htmlpath.write_text(formatted_html, encoding="utf-8")
+
+    return {
+        "filename": htmlpath.name,
+        "images": len(external_imgs),
+        "equations": len(equations),
+    }
+
+
+@click.command()
+@click.argument("path", type=click.Path(exists=True, path_type=Path))
+@click.help_option("--help", "-h")
+def main(path: Path) -> None:
+    # figure out input and output
+    unzippath = path.with_suffix("")
+    if unzippath.exists():
+        shutil.rmtree(unzippath)
+    with zipfile.ZipFile(path, "r") as zip_ref:
+        zip_ref.extractall(unzippath)
+    htmlpaths = list(unzippath.rglob("*.html"))
+
+    # share common stuff between pages
+    cachepath = unzippath / ".cache"
+    cachepath.mkdir(exist_ok=True)
+    cached_img_links = []
+    cached_img_lock = Lock()
+
+    # load injection
+    css_injection = (Path.cwd() / "injection.css").read_text(encoding="utf-8")
+
+    executor = ThreadPoolExecutor(max_workers=os.cpu_count())
+    futures = [executor.submit(process_html_file, htmlpath, cachepath, css_injection, cached_img_links, cached_img_lock) for htmlpath in htmlpaths]
+    pbar = tqdm(total=len(htmlpaths), desc="Processing", unit="file")
+    for future in as_completed(futures):
+        result = future.result()
+        pbar.set_description(f"Completed: {result['filename']}")
+        pbar.set_postfix(images=result["images"], equations=result["equations"])
+        pbar.update(1)
+    pbar.close()
+    executor.shutdown(wait=True)
+
+
+if __name__ == "__main__":
+    main()

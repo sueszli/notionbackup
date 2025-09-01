@@ -27,7 +27,7 @@ This script fixes all three issues, giving you editable, offline-ready files tha
 
 # Usage
 
-Export your Notion workspace as HTML with (1) everything included, (2) subpages included, and (3) folders for subpages enabled.
+Export your Notion workspace as HTML with (1) everything included, (2) subpages included and (3) folders for subpages enabled.
 
 ```
 uv run notionbackup.py --help
