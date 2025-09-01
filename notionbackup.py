@@ -1,3 +1,10 @@
+# /// script
+# dependencies = [
+#     "requests==2.32.3",
+#     "beautifulsoup4==4.12.3",
+# ]
+# ///
+
 import argparse
 import os
 import re

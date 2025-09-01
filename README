@@ -29,13 +29,10 @@ This script fixes all three issues, giving you editable, offline-ready files tha
 
 Export your Notion workspace as HTML with (1) everything included, (2) subpages included, and (3) folders for subpages enabled.
 
-Then run the script below:
-
 ```
-pip install -r requirements.txt
+uv run notionbackup.py --help
 
-# demo
-python notionbackup ./data/all-blocks.zip
-python notionbackup ./data/blog.zip
-python notionbackup ./data/full-templates.zip
+uv run notionbackup.py ./data/all-blocks.zip
+uv run notionbackup.py ./data/blog.zip
+uv run notionbackup.py ./data/full-templates.zip
 ```
