@@ -14,12 +14,23 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from threading import Lock
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 import click
 import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
+
+CSS_INJECTION = """
+/* notionbackup injection */
+body { white-space: normal !important; }
+p { min-height: 1em !important; }
+.code, code { font-size: 100% !important; }
+blockquote { font-size: 100% !important; }
+.callout { white-space: normal !important; }
+.callout div:has(span.icon) { font-size: 100% !important; }
+.source:not(.bookmark) { font-size: 100% !important; }
+"""
 
 
 def process_html_file(htmlpath: Path, cachepath: Path, css_injection: str, cached_img_links: List[str], cached_img_lock: Lock) -> Dict[str, Any]:
@@ -135,11 +146,8 @@ def main(path: Path) -> None:
     cached_img_links = []
     cached_img_lock = Lock()
 
-    # load injection
-    css_injection = (Path.cwd() / "injection.css").read_text(encoding="utf-8")
-
     executor = ThreadPoolExecutor(max_workers=os.cpu_count())
-    futures = [executor.submit(process_html_file, htmlpath, cachepath, css_injection, cached_img_links, cached_img_lock) for htmlpath in htmlpaths]
+    futures = [executor.submit(process_html_file, htmlpath, cachepath, CSS_INJECTION, cached_img_links, cached_img_lock) for htmlpath in htmlpaths]
     pbar = tqdm(total=len(htmlpaths), desc="Processing", unit="file")
     for future in as_completed(futures):
         result = future.result()
