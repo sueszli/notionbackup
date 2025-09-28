@@ -1,4 +1,5 @@
 # /// script
+# requires-python = ">=3.11"
 # dependencies = [
 #     "requests==2.32.3",
 #     "beautifulsoup4==4.12.3",
