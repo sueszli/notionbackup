@@ -10,7 +10,7 @@ HTML is the only format that can capture everything in your Notion workspace wit
 
 The problem is that Notion's default HTML exports are broken in three ways: (1) they're minified so you can't edit them, (2) they need internet access to render math equations and (3) they look like generic web pages instead of Notion.
 
-This script fixes all three issues, giving you editable, offline-ready files that actually look like Notion.
+This tiny script fixes all three issues, giving you editable, offline-ready files that actually look like Notion.
 
 
 ┌─────────────────────┬─────────────────────┬────────────────────────────────┬──────────────┐
