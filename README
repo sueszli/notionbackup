@@ -32,7 +32,7 @@ Export your Notion workspace as HTML with (1) everything included, (2) subpages 
 ```
 uv run notionbackup.py --help
 
-uv run notionbackup.py ./data/all-blocks.zip
-uv run notionbackup.py ./data/blog.zip
-uv run notionbackup.py ./data/full-templates.zip
+uv run notionbackup.py ./demo-data/all-blocks.zip
+uv run notionbackup.py ./demo-data/blog.zip
+uv run notionbackup.py ./demo-data/full-templates.zip
 ```
