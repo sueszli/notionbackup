@@ -13,16 +13,16 @@ The problem is that Notion's default HTML exports are broken in three ways: (1) 
 This tiny script fixes all three issues, giving you editable, offline-ready files that actually look like Notion.
 
 
-┌─────────────────────┬─────────────────────┬────────────────────────────────┬──────────────┐
-│ Export type         │ No data loss        │ Fully offline                  │ Editable     │
-╞═════════════════════╪═════════════════════╪════════════════════════════════╪══════════════╡
-│ Notion API (JSON)   │ ✘                   │ ✔                              │ ✔            │
-│ Web scraping (HTML) │ ✘ (unreliable)      │ ✘ (depends on implementation)  │ ✘ (minified) │
-│ PDF                 │ ✘                   │ ✔                              │ ✘            │
-│ Markdown            │ ✘                   │ ✔                              │ ✔            │
-│ HTML                │ ✔                   │ ✘ (CDN dependency)             │ ✘ (minified) │
-│ HTML + NotionBackup │ ✔                   │ ✔                              │ ✔            │
-└─────────────────────┴─────────────────────┴────────────────────────────────┴──────────────┘
+┌─────────────────────┬────────────────┬──────────────────────────────┬──────────────┐
+│ Export type         │ No data loss   │ Fully offline                │ Editable     │
+╞═════════════════════╪════════════════╪══════════════════════════════╪══════════════╡
+│ Notion API (JSON)   │ ✘              │ ✔                            │ ✔            │
+│ Web scraping (HTML) │ ✘ (unreliable) │ ✘ (implementation dependent) │ ✘ (minified) │
+│ PDF                 │ ✘              │ ✔                            │ ✘            │
+│ Markdown            │ ✘              │ ✔                            │ ✔            │
+│ HTML                │ ✔              │ ✘ (CDN dependency)           │ ✘ (minified) │
+│ HTML + NotionBackup │ ✔              │ ✔                            │ ✔            │
+└─────────────────────┴────────────────┴──────────────────────────────┴──────────────┘
 
 
 # Usage
