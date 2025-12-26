@@ -6,7 +6,7 @@
 future-proof your notion exports                            /_/                            
 
 
-HTML is the only format that can capture everything in your Notion workspace without losing information. Unlike JSON, Markdown or PDF exports, HTML can handle toggles, nested blocks, databases and embedded content.
+HTML is the only export format that can capture everything in your Notion workspace without losing information. Unlike JSON, Markdown or PDF exports, HTML can handle toggles, nested blocks, databases and embedded content.
 
 The problem is that Notion's default HTML exports are broken in three ways: (1) they're minified so you can't edit them, (2) they need internet access to render math equations and (3) they look like generic web pages instead of Notion.
 
