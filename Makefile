@@ -1,7 +1,7 @@
 .PHONY: lint # statically analyze code
 lint:
 	uvx ruff check .
-	uvx --with beautifulsoup4 --with click --with tqdm pyright .
+	uvx --with beautifulsoup4 --with click --with	uv run --with click --with beautifulsoup4 --with tqdm pyright .
 
 .PHONY: fmt # format code
 fmt:

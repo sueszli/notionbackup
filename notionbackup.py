@@ -53,8 +53,10 @@ def process_html_file(htmlpath: Path, cachepath: Path, css_injection: str, cache
     # replace asset content with filename instead of aws-bucket name
     anchor_wrappers = [elem for elem in elems if elem.has_attr("class") and "source" in elem["class"]]
     anchors = [wrapper.find("a") for wrapper in anchor_wrappers]
+
     def is_asset(anchor):
         return anchor and anchor.has_attr("href") and anchor["href"] and not anchor["href"].startswith("http")
+
     for anchor in anchors:
         if is_asset(anchor):
             href = anchor["href"]
