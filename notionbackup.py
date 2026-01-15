@@ -11,14 +11,14 @@ import os
 import re
 import shutil
 import time
+import urllib.error
+import urllib.request
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from threading import Lock
 from typing import Any, Dict, List
 
-import urllib.error
-import urllib.request
 import click
 from bs4 import BeautifulSoup
 from tqdm import tqdm
