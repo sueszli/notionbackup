@@ -1,6 +1,7 @@
 # /// script
 # requires-python = ">=3.14"
 # dependencies = [
+#     "deal==4.24.6",
 #     "beautifulsoup4==4.12.3",
 #     "click==8.1.7",
 #     "tqdm==4.66.4",
@@ -20,6 +21,7 @@ from threading import Lock
 from typing import Any, Dict, List
 
 import click
+import deal
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
@@ -35,6 +37,10 @@ blockquote { font-size: 100% !important; }
 """
 
 
+@deal.pre(lambda _: _.htmlpath.exists())
+@deal.post(lambda result: "filename" in result)
+@deal.post(lambda result: "images" in result and result["images"] >= 0)
+@deal.post(lambda result: "equations" in result and result["equations"] >= 0)
 def process_html_file(htmlpath: Path, cachepath: Path, css_injection: str, cached_img_links: List[str], cached_img_lock: Lock) -> Dict[str, Any]:
     content = htmlpath.read_text(encoding="utf-8")
     soup = BeautifulSoup(content, "html.parser")

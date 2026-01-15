@@ -1,7 +1,9 @@
 .PHONY: lint # statically analyze code
 lint:
 	uvx ruff check .
-	uvx --with beautifulsoup4 --with click --with	uv run --with click --with beautifulsoup4 --with tqdm pyright .
+	uv run --with deal==4.24.6 --with beautifulsoup4==4.12.3 --with click==8.1.7 --with tqdm==4.66.4 pyright .
+	uv run --with deal==4.24.6 python3 -m deal lint notionbackup.py
+	uv run --with deal==4.24.6 python3 -m deal test notionbackup.py
 
 .PHONY: fmt # format code
 fmt:
