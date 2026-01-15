@@ -29,13 +29,14 @@ This tiny script fixes all three issues, giving you editable, offline-ready file
 
 Export your Notion workspace as HTML with (1) everything included, (2) subpages included and (3) folders for subpages enabled.
 
-```
-# usage without cloning
-uv run https://raw.githubusercontent.com/sueszli/notionbackup/refs/heads/main/notionbackup.py --help
+Then run the script:
 
-# usage with cloning
-uv run notionbackup.py --help
-uv run notionbackup.py ./demo-data/all-blocks.zip
-uv run notionbackup.py ./demo-data/blog.zip
-uv run notionbackup.py ./demo-data/full-templates.zip
+```
+uv run https://raw.githubusercontent.com/sueszli/notionbackup/refs/heads/main/notionbackup.py --help
+```
+
+For development, clone the repository and run:
+
+```
+make help
 ```

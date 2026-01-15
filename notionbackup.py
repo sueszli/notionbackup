@@ -11,6 +11,7 @@
 import os
 import re
 import shutil
+import time
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -134,6 +135,7 @@ def process_html_file(htmlpath: Path, cachepath: Path, css_injection: str, cache
 @click.help_option("--help", "-h")
 def main(path: Path) -> None:
     # figure out input and output
+    start_time = time.time()
     unzippath = path.with_suffix("")
     if unzippath.exists():
         shutil.rmtree(unzippath)
@@ -157,6 +159,8 @@ def main(path: Path) -> None:
         pbar.update(1)
     pbar.close()
     executor.shutdown(wait=True)
+    end_time = time.time()
+    print(f"Time elapsed: {end_time - start_time:.2f}s")
 
 
 if __name__ == "__main__":
