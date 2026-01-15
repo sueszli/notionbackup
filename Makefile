@@ -1,3 +1,8 @@
+.PHONY: lint # statically analyze code
+lint:
+	uv run pyright .
+	# deal library
+
 .PHONY: fmt # format code
 fmt:
 	uvx isort .
