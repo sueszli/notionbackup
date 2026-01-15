@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.11"
+# requires-python = ">=3.14"
 # dependencies = [
 #     "beautifulsoup4==4.12.3",
 #     "click==8.1.7",
@@ -53,7 +53,8 @@ def process_html_file(htmlpath: Path, cachepath: Path, css_injection: str, cache
     # replace asset content with filename instead of aws-bucket name
     anchor_wrappers = [elem for elem in elems if elem.has_attr("class") and "source" in elem["class"]]
     anchors = [wrapper.find("a") for wrapper in anchor_wrappers]
-    is_asset = lambda anchor: anchor and anchor.has_attr("href") and anchor["href"] and not anchor["href"].startswith("http")
+    def is_asset(anchor):
+        return anchor and anchor.has_attr("href") and anchor["href"] and not anchor["href"].startswith("http")
     for anchor in anchors:
         if is_asset(anchor):
             href = anchor["href"]
@@ -64,6 +65,7 @@ def process_html_file(htmlpath: Path, cachepath: Path, css_injection: str, cache
     style_elem = soup.new_tag("style")
     style_elem.string = css_injection
     head = soup.head
+    assert head
     head.append(style_elem)
 
     # cache images
@@ -110,10 +112,11 @@ def process_html_file(htmlpath: Path, cachepath: Path, css_injection: str, cache
         style_elem.decompose()
 
         head = soup.head
-        link_elem = soup.new_tag("link")
-        link_elem["rel"] = "stylesheet"
-        link_elem["href"] = os.path.relpath(katex_cache_path, htmlpath.parent)
-        head.append(link_elem)
+        if head:
+            link_elem = soup.new_tag("link")
+            link_elem["rel"] = "stylesheet"
+            link_elem["href"] = os.path.relpath(katex_cache_path, htmlpath.parent)
+            head.append(link_elem)
 
     # format html, keep equations as they are
     equations = [elem for elem in soup.find_all("figure", class_="equation")]
