@@ -1,7 +1,6 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#     "requests==2.32.3",
 #     "beautifulsoup4==4.12.3",
 #     "click==8.1.7",
 #     "tqdm==4.66.4",
@@ -18,8 +17,9 @@ from pathlib import Path
 from threading import Lock
 from typing import Any, Dict, List
 
+import urllib.error
+import urllib.request
 import click
-import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
@@ -77,14 +77,17 @@ def process_html_file(htmlpath: Path, cachepath: Path, css_injection: str, cache
             cached_img_links.append(url)
 
         try:
-            response = requests.get(url, stream=True)
-            filename = Path(url).name
-            cache_img_path = cachepath / filename
-            with open(cache_img_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=128):
-                    f.write(chunk)
-            img["src"] = os.path.relpath(cache_img_path, htmlpath.parent)
-        except requests.exceptions.ConnectionError:
+            with urllib.request.urlopen(url) as response:
+                filename = Path(url).name
+                cache_img_path = cachepath / filename
+                with open(cache_img_path, "wb") as f:
+                    while True:
+                        chunk = response.read(128)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                img["src"] = os.path.relpath(cache_img_path, htmlpath.parent)
+        except urllib.error.URLError:
             pass
 
     # cache katex
@@ -96,10 +99,14 @@ def process_html_file(htmlpath: Path, cachepath: Path, css_injection: str, cache
         katex_url = style_elem.string.split("url(")[1].split(")")[0].replace("'", "")
 
         katex_cache_path = cachepath / "katex.min.css"
-        response = requests.get(katex_url, stream=True)
-        with open(katex_cache_path, "wb") as f:
-            for chunk in response.iter_content(chunk_size=128):
-                f.write(chunk)
+        katex_cache_path = cachepath / "katex.min.css"
+        with urllib.request.urlopen(katex_url) as response:
+            with open(katex_cache_path, "wb") as f:
+                while True:
+                    chunk = response.read(128)
+                    if not chunk:
+                        break
+                    f.write(chunk)
         style_elem.decompose()
 
         head = soup.head
