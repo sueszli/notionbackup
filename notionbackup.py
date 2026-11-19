@@ -1,185 +1,89 @@
 # /// script
 # requires-python = ">=3.14"
 # dependencies = [
-#     "deal==4.24.6",
-#     "beautifulsoup4==4.12.3",
-#     "click==8.1.7",
-#     "tqdm==4.66.4",
+#     "beautifulsoup4==4.15.0",
+#     "httpx==0.28.1",
+#     "tqdm==4.70.1",
+#     "tyro==1.0.17",
 # ]
 # ///
 
-import os
+import hashlib
 import re
-import shutil
-import time
-import urllib.error
-import urllib.request
 import zipfile
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import partial
+from html import unescape
 from pathlib import Path
-from threading import Lock
-from typing import Any, Dict, List
+from urllib.parse import unquote, urljoin
 
-import click
-import deal
+import httpx
+import tyro
 from bs4 import BeautifulSoup
-from tqdm import tqdm
+from bs4.element import Stylesheet
+from tqdm.contrib.concurrent import process_map, thread_map
 
 CSS_INJECTION = """
 /* notionbackup injection */
-body { white-space: normal !important; }
 p { min-height: 1em !important; }
 .code, code { font-size: 100% !important; }
 blockquote { font-size: 100% !important; }
-.callout { white-space: normal !important; }
 .callout div:has(span.icon) { font-size: 100% !important; }
 .source:not(.bookmark) { font-size: 100% !important; }
 """
+CSS_URL = re.compile(r"""url\(\s*['"]?([^'")]+?)['"]?\s*\)""")
+IMG_SRC = re.compile(r'<img\b[^>]*?\ssrc="(http[^"]*)"')
+
+parse = lambda page: BeautifulSoup(page.read_text(encoding="utf-8"), "html.parser")
 
 
-@deal.pre(lambda _: _.htmlpath.exists())
-@deal.post(lambda result: "filename" in result)
-@deal.post(lambda result: "images" in result and result["images"] >= 0)
-@deal.post(lambda result: "equations" in result and result["equations"] >= 0)
-def process_html_file(htmlpath: Path, cachepath: Path, css_injection: str, cached_img_links: List[str], cached_img_lock: Lock) -> Dict[str, Any]:
-    content = htmlpath.read_text(encoding="utf-8")
-    soup = BeautifulSoup(content, "html.parser")
-    elems = soup.find_all()
-
-    # drop ids
-    for elem in elems:
-        if elem.has_attr("id"):
-            del elem["id"]
-
-    # drop empty class attributes
-    for elem in elems:
-        if elem.has_attr("class") and elem["class"] == []:
-            del elem["class"]
-
-    # replace asset content with filename instead of aws-bucket name
-    anchor_wrappers = [elem for elem in elems if elem.has_attr("class") and "source" in elem["class"]]
-    anchors = [wrapper.find("a") for wrapper in anchor_wrappers]
-
-    def is_asset(anchor):
-        return anchor and anchor.has_attr("href") and anchor["href"] and not anchor["href"].startswith("http")
-
-    for anchor in anchors:
-        if is_asset(anchor):
-            href = anchor["href"]
-            filename = Path(href).name
-            anchor.string = filename
-
-    # inject custom css
-    style_elem = soup.new_tag("style")
-    style_elem.string = css_injection
-    head = soup.head
-    assert head
-    head.append(style_elem)
-
-    # cache images
-    imgs = [elem for elem in elems if elem.name == "img"]
-    external_imgs = [img for img in imgs if img.has_attr("src") and img["src"].startswith("http")]
-    for img in external_imgs:
-        url = img["src"]
-        with cached_img_lock:
-            if url in cached_img_links:
-                continue
-            cached_img_links.append(url)
-
-        try:
-            with urllib.request.urlopen(url) as response:
-                filename = Path(url).name
-                cache_img_path = cachepath / filename
-                with open(cache_img_path, "wb") as f:
-                    while True:
-                        chunk = response.read(128)
-                        if not chunk:
-                            break
-                        f.write(chunk)
-                img["src"] = os.path.relpath(cache_img_path, htmlpath.parent)
-        except urllib.error.URLError:
-            pass
-
-    # cache katex
-    equations = [elem for elem in elems if elem and elem.name == "figure" and "equation" in elem.get("class", [])]
-    if equations:
-        eqn = equations[0]
-        style_elem = eqn.find("style")
-        assert style_elem
-        katex_url = style_elem.string.split("url(")[1].split(")")[0].replace("'", "")
-
-        katex_cache_path = cachepath / "katex.min.css"
-        katex_cache_path = cachepath / "katex.min.css"
-        with urllib.request.urlopen(katex_url) as response:
-            with open(katex_cache_path, "wb") as f:
-                while True:
-                    chunk = response.read(128)
-                    if not chunk:
-                        break
-                    f.write(chunk)
-        style_elem.decompose()
-
-        head = soup.head
-        if head:
-            link_elem = soup.new_tag("link")
-            link_elem["rel"] = "stylesheet"
-            link_elem["href"] = os.path.relpath(katex_cache_path, htmlpath.parent)
-            head.append(link_elem)
-
-    # format html, keep equations as they are
-    equations = [elem for elem in soup.find_all("figure", class_="equation")]
-    equation_placeholders = {}
-    for i, eq in enumerate(equations):
-        placeholder = f"EQUATION_PLACEHOLDER_{i}"
-        equation_placeholders[placeholder] = str(eq)
-        eq.replace_with(placeholder)
-    formatted_html = soup.prettify()
-    for placeholder, equation in equation_placeholders.items():
-        formatted_html = formatted_html.replace(placeholder, equation)
-    formatted_html = re.sub(r'\n\s*(<figure class="equation".*?</figure>)\s*\n', r"\1", formatted_html, flags=re.DOTALL)
-
-    # write back
-    htmlpath.write_text(formatted_html, encoding="utf-8")
-
-    return {
-        "filename": htmlpath.name,
-        "images": len(external_imgs),
-        "equations": len(equations),
-    }
+def remote_urls(page: Path) -> set[str]:
+    html = page.read_text(encoding="utf-8")
+    # regex avoids a second full parse
+    return {unescape(u) for u in IMG_SRC.findall(html)} | {u for u in CSS_URL.findall(html) if u.startswith("http")}
 
 
-@click.command()
-@click.argument("path", type=click.Path(exists=True, path_type=Path))
-@click.help_option("--help", "-h")
-def main(path: Path) -> None:
-    # figure out input and output
-    start_time = time.time()
-    unzippath = path.with_suffix("")
-    if unzippath.exists():
-        shutil.rmtree(unzippath)
-    with zipfile.ZipFile(path, "r") as zip_ref:
-        zip_ref.extractall(unzippath)
-    htmlpaths = list(unzippath.rglob("*.html"))
+def fetch(client: httpx.Client, cache: Path, url: str) -> str | None:
+    try:
+        name = hashlib.sha1(url.encode()).hexdigest()[:16] + Path(httpx.URL(url).path).suffix  # avoid basename collisions and `?` in paths
+        body = client.get(url).raise_for_status().content
+    except httpx.HTTPError, httpx.InvalidURL:
+        return None
+    if name.endswith(".css"):  # font urls can be relative to the stylesheet
+        body = CSS_URL.sub(lambda m: f"url({fetch(client, cache, ref := urljoin(url, m[1])) or ref})", body.decode()).encode()
+    (cache / name).write_bytes(body)
+    return name
 
-    # share common stuff between pages
-    cachepath = unzippath / ".cache"
-    cachepath.mkdir(exist_ok=True)
-    cached_img_links = []
-    cached_img_lock = Lock()
 
-    executor = ThreadPoolExecutor(max_workers=os.cpu_count())
-    futures = [executor.submit(process_html_file, htmlpath, cachepath, CSS_INJECTION, cached_img_links, cached_img_lock) for htmlpath in htmlpaths]
-    pbar = tqdm(total=len(htmlpaths), desc="Processing", unit="file")
-    for future in as_completed(futures):
-        result = future.result()
-        pbar.set_description(f"Completed: {result['filename']}")
-        pbar.set_postfix(images=result["images"], equations=result["equations"])
-        pbar.update(1)
-    pbar.close()
-    executor.shutdown(wait=True)
-    end_time = time.time()
-    print(f"Time elapsed: {end_time - start_time:.2f}s")
+def rewrite(page: Path, out: Path, names: dict[str, str]) -> None:
+    soup = parse(page)
+    local = {u: "../" * (len(page.relative_to(out).parts) - 1) + ".cache/" + n for u, n in names.items()}
+    for img in soup.select('img[src^="http"]'):
+        img["src"] = local.get(str(img["src"]), str(img["src"]))
+    for st in soup.find_all("style"):
+        st.string = Stylesheet(CSS_URL.sub(lambda m: f"url('{local[m[1]]}')" if m[1] in local else m[0], st.get_text()))
+    for a in soup.select('.source a[href]:not([href^="http"])'):  # show filenames without storage keys
+        a.string = unquote(Path(str(a["href"])).name)
+    (soup.head or soup).append(style := soup.new_tag("style"))
+    style.string = Stylesheet(CSS_INJECTION)
+    # put newlines inside tags to preserve rendered whitespace
+    page.write_text(re.sub(r"(<(script|style)\b.*?</\2)|(?<!--)(?=><)", lambda m: m[1] or "\n", str(soup), flags=re.DOTALL), encoding="utf-8")
+
+
+def main(path: Path, /) -> None:
+    out = path.with_suffix("")
+    assert zipfile.is_zipfile(path), f"not a zip file: {path}"
+    assert not out.exists(), f"output already exists, delete it first: {out}"
+    with zipfile.ZipFile(path) as z:
+        nested = all(n.endswith(".zip") for n in z.namelist())  # large exports nest Part-N zips
+        for part in [zipfile.ZipFile(z.open(n)) for n in z.namelist()] if nested else [z]:
+            part.extractall(out)
+    (cache := out / ".cache").mkdir(parents=True)
+    pages = list(out.rglob("*.html"))
+    urls = list(set().union(*map(remote_urls, pages)))
+    with httpx.Client(timeout=30, follow_redirects=True) as client:
+        names = {u: n for u, n in zip(urls, thread_map(partial(fetch, client, cache), urls, desc="download")) if n}
+    process_map(partial(rewrite, out=out, names=names), pages, desc="write", chunksize=16)
 
 
 if __name__ == "__main__":
-    main()
+    tyro.cli(main)

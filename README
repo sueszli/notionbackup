@@ -3,40 +3,23 @@
   /  |/ / __ \/ __/ / __ \/ __ \   / __  / __ `/ ___/ //_/ / / / __ \
  / /|  / /_/ / /_/ / /_/ / / / /  / /_/ / /_/ / /__/ ,< / /_/ / /_/ /
 /_/ |_/\____/\__/_/\____/_/ /_/  /_____/\__,_/\___/_/|_|\__,_/ .___/
-future-proof your notion exports                            /_/                            
+future-proof your notion exports                            /_/
 
 
-HTML is the only export format that can capture everything in your Notion workspace without losing information. Unlike JSON, Markdown or PDF exports, HTML can handle toggles, nested blocks, databases and embedded content.
+notion's html export is the only format that keeps
+toggles, nested blocks, databases and embeds.
+but its pages load images and math from the internet,
+sit on a single line and look like plain web pages.
 
-The problem is that Notion's default HTML exports are broken in three ways: (1) they're minified so you can't edit them, (2) they need internet access to render math equations and (3) they look like generic web pages instead of Notion.
-
-This tiny script fixes all three issues, giving you editable, offline-ready files that actually look like Notion.
-
-
-┌─────────────────────┬────────────────┬──────────────────────────────┬──────────────┐
-│ Export type         │ No data loss   │ Fully offline                │ Editable     │
-╞═════════════════════╪════════════════╪══════════════════════════════╪══════════════╡
-│ Notion API (JSON)   │ ✘              │ ✔                            │ ✔            │
-│ Web scraping (HTML) │ ✘ (unreliable) │ ✘ (implementation dependent) │ ✘ (minified) │
-│ PDF                 │ ✘              │ ✔                            │ ✘            │
-│ Markdown            │ ✘              │ ✔                            │ ✔            │
-│ HTML                │ ✔              │ ✘ (CDN dependency)           │ ✘ (minified) │
-│ HTML + NotionBackup │ ✔              │ ✔                            │ ✔            │
-└─────────────────────┴────────────────┴──────────────────────────────┴──────────────┘
+this script makes them offline, editable
+and closer to notion's look.
 
 
-# Usage
+usage:
 
-Export your Notion workspace as HTML with (1) everything included, (2) subpages included and (3) folders for subpages enabled.
+export as html with everything, subpages and
+folders for subpages included, then run:
 
-Then run the script:
+    $ uv run https://raw.githubusercontent.com/sueszli/notionbackup/refs/heads/main/notionbackup.py export.zip
 
-```
-uv run https://raw.githubusercontent.com/sueszli/notionbackup/refs/heads/main/notionbackup.py --help
-```
-
-For development, clone the repository and run:
-
-```
-make help
-```
+the result goes to ./export/ next to the zip.
