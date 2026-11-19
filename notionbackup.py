@@ -37,17 +37,18 @@ parse = lambda page: BeautifulSoup(page.read_text(encoding="utf-8"), "html.parse
 
 
 def remote_urls(page: Path) -> set[str]:
-    html = page.read_text(encoding="utf-8")  # regex instead of a second full parse, this pass only needs urls
+    html = page.read_text(encoding="utf-8")
+    # regex is enough to find urls
     return {unescape(u) for u in IMG_SRC.findall(html)} | {u for u in CSS_URL.findall(html) if u.startswith("http")}
 
 
 def fetch(client: httpx.Client, cache: Path, url: str) -> str | None:
     try:
-        name = hashlib.sha1(url.encode()).hexdigest()[:16] + Path(httpx.URL(url).path).suffix  # hashed names avoid collisions and keep "?" out of local paths
+        name = hashlib.sha1(url.encode()).hexdigest()[:16] + Path(httpx.URL(url).path).suffix  # avoid basename collisions and `?` in paths
         body = client.get(url).raise_for_status().content
     except httpx.HTTPError, httpx.InvalidURL:
         return None
-    if name.endswith(".css"):  # stylesheets like katex load their fonts relative to themselves
+    if name.endswith(".css"):  # font urls can be relative to the stylesheet
         body = CSS_URL.sub(lambda m: f"url({fetch(client, cache, ref := urljoin(url, m[1])) or ref})", body.decode()).encode()
     (cache / name).write_bytes(body)
     return name
@@ -60,11 +61,11 @@ def rewrite(page: Path, out: Path, names: dict[str, str]) -> None:
         img["src"] = local.get(str(img["src"]), str(img["src"]))
     for st in soup.find_all("style"):
         st.string = Stylesheet(CSS_URL.sub(lambda m: f"url('{local[m[1]]}')" if m[1] in local else m[0], st.get_text()))
-    for a in soup.select('.source a[href]:not([href^="http"])'):  # show the attachment filename, not its storage key
+    for a in soup.select('.source a[href]:not([href^="http"])'):  # show filenames without storage keys
         a.string = unquote(Path(str(a["href"])).name)
     (soup.head or soup).append(style := soup.new_tag("style"))
     style.string = Stylesheet(CSS_INJECTION)
-    # break lines inside tags, never between them, so the rendered page keeps its whitespace. script and style bodies stay untouched
+    # put newlines inside tags to preserve rendered whitespace
     page.write_text(re.sub(r"(<(script|style)\b.*?</\2)|(?<!--)(?=><)", lambda m: m[1] or "\n", str(soup), flags=re.DOTALL), encoding="utf-8")
 
 
