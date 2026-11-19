@@ -38,7 +38,7 @@ parse = lambda page: BeautifulSoup(page.read_text(encoding="utf-8"), "html.parse
 
 def remote_urls(page: Path) -> set[str]:
     html = page.read_text(encoding="utf-8")
-    # regex is enough to find urls
+    # regex avoids a second full parse
     return {unescape(u) for u in IMG_SRC.findall(html)} | {u for u in CSS_URL.findall(html) if u.startswith("http")}
 
 
