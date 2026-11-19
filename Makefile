@@ -1,9 +1,7 @@
 .PHONY: lint # statically analyze code
 lint:
 	uvx ruff check .
-	uv run --with deal==4.24.6 --with beautifulsoup4==4.12.3 --with click==8.1.7 --with tqdm==4.66.4 pyright .
-	uv run --with deal==4.24.6 python3 -m deal lint notionbackup.py
-	uv run --with deal==4.24.6 python3 -m deal test notionbackup.py
+	uv run --with pyright --with-requirements notionbackup.py pyright notionbackup.py
 
 .PHONY: fmt # format code
 fmt:
@@ -13,6 +11,7 @@ fmt:
 
 .PHONY: e2e-test # run end-to-end tests
 e2e-test:
+	rm -rf test-data/all-blocks test-data/blog test-data/full-templates
 	uv run notionbackup.py ./test-data/all-blocks.zip
 	uv run notionbackup.py ./test-data/blog.zip
 	uv run notionbackup.py ./test-data/full-templates.zip

@@ -819,3 +819,5 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/r,vim,emacs,latex,linux,macos,python,windows,jetbrains+all,visualstudiocode,c++
+# notionbackup output
+test-data/*/
