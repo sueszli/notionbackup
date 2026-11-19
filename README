@@ -6,21 +6,20 @@
 future-proof your notion exports                            /_/
 
 
-Notion's HTML export is the only format that keeps everything: toggles, nested blocks, databases and embeds. Markdown, PDF and the API lose some of it. But the HTML pages load images and math from the internet, put each page on one line and look like plain web pages.
+notion's html export is the only format that keeps
+toggles, nested blocks, databases and embeds.
+but its pages load images and math from the internet,
+sit on a single line and look like plain web pages.
 
-This script fixes the export in place:
-
-- Offline: downloads remote images, icons and KaTeX with its fonts into `.cache/`.
-- Editable: puts each tag on its own line without changing what the page displays.
-- Notion look: restores Notion's font sizes and empty lines, and shows attachments by filename.
+this script makes them offline, editable
+and closer to notion's look.
 
 
-# Usage
+usage:
 
-Export your Notion workspace as HTML with (1) everything included, (2) subpages included and (3) folders for subpages enabled.
+export as html with everything, subpages and
+folders for subpages included, then run:
 
-Then run the script on the zip. It writes the result to a folder next to the zip:
+    $ uv run https://raw.githubusercontent.com/sueszli/notionbackup/refs/heads/main/notionbackup.py export.zip
 
-```
-uv run https://raw.githubusercontent.com/sueszli/notionbackup/refs/heads/main/notionbackup.py export.zip
-```
+the result goes to ./export/ next to the zip.
