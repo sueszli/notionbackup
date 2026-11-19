@@ -24,9 +24,3 @@ Then run the script on the zip. It writes the result to a folder next to the zip
 ```
 uv run https://raw.githubusercontent.com/sueszli/notionbackup/refs/heads/main/notionbackup.py export.zip
 ```
-
-For development, clone the repository and run:
-
-```
-make precommit
-```
