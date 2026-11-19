@@ -1,3 +1,10 @@
+.PHONY: precommit
+precommit:
+	$(MAKE) precommit-hook
+	$(MAKE) fmt
+	$(MAKE) lint
+	$(MAKE) tests
+
 .PHONY: precommit-hook
 precommit-hook:
 	@common_dir="$$(git rev-parse --git-common-dir 2>/dev/null)"; \
@@ -21,10 +28,3 @@ lint:
 tests:
 	rm -rf /tmp/notionbackup && mkdir /tmp/notionbackup && cp test-data/*.zip /tmp/notionbackup
 	for z in /tmp/notionbackup/*.zip; do uv run notionbackup.py "$$z" || exit 1; done
-
-.PHONY: precommit
-precommit:
-	$(MAKE) precommit-hook
-	$(MAKE) fmt
-	$(MAKE) lint
-	$(MAKE) tests
