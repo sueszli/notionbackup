@@ -19,10 +19,8 @@ lint:
 
 .PHONY: tests
 tests:
-	rm -rf test-data/all-blocks test-data/blog test-data/full-templates
-	uv run notionbackup.py test-data/all-blocks.zip
-	uv run notionbackup.py test-data/blog.zip
-	uv run notionbackup.py test-data/full-templates.zip
+	rm -rf /tmp/notionbackup && mkdir /tmp/notionbackup && cp test-data/*.zip /tmp/notionbackup
+	for z in /tmp/notionbackup/*.zip; do uv run notionbackup.py "$$z" || exit 1; done
 
 .PHONY: precommit
 precommit:
