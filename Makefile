@@ -5,9 +5,8 @@ lint:
 
 .PHONY: fmt # format code
 fmt:
-	uvx isort .
-	uvx autoflake --remove-all-unused-imports --recursive --in-place .
-	uvx black --line-length 5000 .
+	uvx ruff check --select I,F401 --fix .
+	uvx ruff format --line-length 5000 .
 
 .PHONY: e2e-test # run end-to-end tests
 e2e-test:

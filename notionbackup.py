@@ -61,8 +61,8 @@ def rewrite(soup: BeautifulSoup, local: dict[str, str]) -> str:
     style = soup.new_tag("style")
     style.string = Stylesheet(CSS_INJECTION)
     (soup.head or soup).append(style)
-    # break lines inside tags, never between them, so no visible whitespace is added
-    return re.sub(r"(?<!--)><", "\n><", str(soup))
+    # break lines inside tags, never between them, so no visible whitespace is added. script and style bodies are left alone
+    return re.sub(r"(<(script|style)\b.*?</\2)|(?<!--)(?=><)", lambda m: m[1] or "\n", str(soup), flags=re.DOTALL)
 
 
 def main(path: Path, /) -> None:
