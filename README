@@ -16,9 +16,4 @@ and closer to notion's look.
 
 usage:
 
-export as html with everything, subpages and
-folders for subpages included, then run:
-
-    $ uv run https://raw.githubusercontent.com/sueszli/notionbackup/refs/heads/main/notionbackup.py export.zip
-
-the result goes to ./export/ next to the zip.
+$ uv run https://raw.githubusercontent.com/sueszli/notionbackup/refs/heads/main/notionbackup.py export.zip
